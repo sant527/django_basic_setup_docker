@@ -544,7 +544,7 @@ services:
   phppgadmin:
     image: "bitnami/phppgadmin:7.13.0"
     ports:
-      - 8026:8026
+      - 8026:8080
     environment:
       DATABASE_HOST: "postgresql"
       DATABASE_SSL_MODE: "disable"
@@ -618,3 +618,10 @@ docker-compose -p petsproject -f docker-compose-localhost-localdb.yml up --build
 
 
 # ALL WORKS GOOD
+
+
+# Migrations
+
+https://docs.djangoproject.com/en/3.2/topics/auth/customizing/#using-a-custom-user-model-when-starting-a-project
+
+Before doing the first migration Extend user to AbstractUser
