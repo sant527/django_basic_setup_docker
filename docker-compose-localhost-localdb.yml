@@ -1,0 +1,92 @@
+# my version of docker
+# $ docker --version
+# Docker version 20.10.12, build 20.10.12-0ubuntu2~20.04.1
+
+# my docker compose version
+# $ docker-compose --version
+# docker-compose version 1.29.2, build 5becea4c
+
+
+# Compose file format supported till version  19.03.0+ is 3.8
+version: "3.7"
+services:
+  postgresql:
+    image: "postgres:13-alpine"
+    restart: always
+    volumes:
+      - type: bind
+        source: ../DO_NOT_DELETE_postgres_data
+        target: /var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: gauranga
+      POSTGRES_USER: simha
+      POSTGRES_PASSWORD: krishna
+      PGDATA: "/var/lib/postgresql/data/pgdata"
+    networks:
+      - postgresql_network
+
+  phppgadmin:
+    image: "bitnami/phppgadmin:7.13.0"
+    ports:
+      - 8026:8026
+    environment:
+      DATABASE_HOST: "postgresql"
+      DATABASE_SSL_MODE: "disable"
+    networks:
+      - nginx_network
+      - postgresql_network
+
+  redis:
+    image: "redis:5.0.9-alpine3.11"
+    command: redis-server
+    environment:
+      - REDIS_REPLICATION_MODE=master
+    networks: # connect to the bridge
+      - redis_network
+
+  celery_worker:
+    image: "python3.10.10_custom_build:latest"
+    volumes:
+      - type: bind
+        source: ./CODE_FOLDERS/python_django_rest_api
+        target: /home/simha/app
+    command:
+      - sh
+      - -c
+      - |
+        pipenv run celery --app=petsproject worker --loglevel=debug #ensure redis-server is running in root and change backed to respective
+    depends_on: # wait for postgresql, redis to be "ready" before starting this service
+      - redis
+      - postgresql
+    networks: # connect to the bridge
+      - redis_network
+      - postgresql_network
+
+  webapp:
+    image: "python3.10.10_custom_build:latest"
+    ports:
+      - 8025:8000
+    volumes:
+      - type: bind
+        source: ./CODE_FOLDERS/python_django_rest_api
+        target: /home/simha/app
+    command:
+      - sh
+      - -c
+      - |
+        pipenv run python manage.py runserver 0.0.0.0:8000
+    depends_on:
+      - postgresql
+    stdin_open: true # Add this line into your service
+    tty: true # Add this line into your service
+    networks:
+      - postgresql_network
+      - nginx_network
+
+networks:
+  postgresql_network:
+    driver: bridge
+  redis_network:
+    driver: bridge
+  nginx_network:
+    driver: bridge
